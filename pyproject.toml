@@ -1,0 +1,13 @@
+[project]
+name = "ReAnalyze"
+version = "0.1.0"
+description = "A tool for analyzing and visualizing benchmark data."
+
+[tool.pylint."messages control"]
+disable = [
+    "missing-module-docstring",
+    "missing-function-docstring",
+    "missing-class-docstring",
+
+    "too-few-public-methods"
+]
