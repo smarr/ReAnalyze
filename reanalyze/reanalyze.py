@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from pandas import concat, read_csv
+from pandas import DataFrame, concat, read_csv
 
 from reanalyze.rebench import download_to_cache
 
@@ -34,7 +34,14 @@ class Column(Enum):
 
 
 class _AnalysisPlan:
-    pass
+    def _subset_to_baseline(self, data_frame: DataFrame) -> DataFrame:
+        raise TypeError()
+
+    def _subset_to_experiment(self, data_frame: DataFrame) -> DataFrame:
+        raise TypeError()
+
+    def _evaluate_data_operations(self) -> DataFrame:
+        raise TypeError()
 
 
 class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan):
@@ -43,7 +50,7 @@ class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan):
 
     def save_plot(self, filename: str):
         data_frame = self._prev._evaluate_data_operations()
-        data_frame = self._prev.subset_to_experiment(data_frame)
+        data_frame = self._prev._subset_to_experiment(data_frame)
         plot = self._prev.evaluate_plot_operations(data_frame)
         print(f"Saving baseline scatter plot to {filename}")
         plot.save(filename)
@@ -55,7 +62,7 @@ class _ScatterPlotWithNormalizedExperimentData(_AnalysisPlan):
 
     def save_plot(self, filename: str):
         data_frame = self._prev._evaluate_data_operations()
-        data_frame = self._prev.subset_to_experiment(data_frame)
+        data_frame = self._prev._subset_to_experiment(data_frame)
         plot = self._prev.evaluate_plot_operations(data_frame)
         print(f"Saving baseline scatter plot to {filename}")
         plot.save(filename)
@@ -100,6 +107,9 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan):
     def _evaluate_data_operations(self):
         return self._prev._evaluate_data_operations()
 
+    def _subset_to_experiment(self, data_frame: DataFrame) -> DataFrame:
+        return self._prev._subset_to_experiment(data_frame)
+
 
 class _NormalizedExperimentData(_AnalysisPlan):
     def __init__(self, prev: _AnalysisPlan):
@@ -119,12 +129,19 @@ class _NormalizedData(_AnalysisPlan):
 
     def _evaluate_data_operations(self):
         data_frame = self._prev._evaluate_data_operations()
-        baseline_df = self._prev.subset_to_baseline(data_frame)
-        baseline_medians = baseline_df.groupby(self._column)[Column.VALUE].median()
-        data_frame[Column.NORMALIZED_VALUE] = data_frame.apply(
-            lambda row: row[Column.VALUE] / baseline_medians[row[self._column]], axis=1
+        baseline_df = self._prev._subset_to_baseline(data_frame)
+        baseline_medians = baseline_df.groupby(self._column.value)[
+            Column.VALUE.value
+        ].median()
+        data_frame[Column.NORMALIZED_VALUE.value] = data_frame.apply(
+            lambda row: row[Column.VALUE.value]
+            / baseline_medians[row[self._column.value]],
+            axis=1,
         )
         return data_frame
+
+    def _subset_to_experiment(self, data_frame: DataFrame) -> DataFrame:
+        return self._prev._subset_to_experiment(data_frame)
 
 
 class _WithExperimentAndBaselineData(_AnalysisPlan):
@@ -144,6 +161,12 @@ class _WithExperimentAndBaselineData(_AnalysisPlan):
     def _load_and_cache_data(self):
         file_path = download_to_cache(self._exp_id, self._project)
         return read_csv(file_path)
+
+    def _subset_to_experiment(self, data_frame: DataFrame) -> DataFrame:
+        return data_frame[data_frame[Column.EXP_ID.value] == self._exp_id]
+
+    def _subset_to_baseline(self, data_frame: DataFrame) -> DataFrame:
+        return self._prev._subset_to_baseline(data_frame)
 
 
 class _WithBaselineData(_AnalysisPlan):
@@ -167,6 +190,9 @@ class _WithBaselineData(_AnalysisPlan):
     def _load_and_cache_data(self):
         file_path = download_to_cache(self._exp_id, self._project)
         return read_csv(file_path)
+
+    def _subset_to_baseline(self, data_frame: DataFrame) -> DataFrame:
+        return data_frame[data_frame[Column.EXP_ID.value] == self._exp_id]
 
 
 class ReAnalyze(_AnalysisPlan):
