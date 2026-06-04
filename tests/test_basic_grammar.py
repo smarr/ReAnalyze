@@ -16,8 +16,8 @@ def test_basic_scenario():
         .x_label("iteration")
         .y_label_with_unit("run time")
     )
-    plot_change.baseline().save("baseline-iteration-time.pdf")
-    plot_change.experiment().save("experiment-iteration-time.pdf")
+    plot_change.baseline().save_plot("baseline-iteration-time.pdf")
+    plot_change.experiment().save_plot("experiment-iteration-time.pdf")
 
     plot_iteration_time = (
         r.experiment()

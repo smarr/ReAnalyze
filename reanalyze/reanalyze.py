@@ -1,4 +1,10 @@
+# pylint: disable=protected-access
+
 from enum import Enum
+
+from pandas import concat, read_csv
+
+from reanalyze.rebench import download_to_cache
 
 
 class Column(Enum):
@@ -35,10 +41,24 @@ class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
 
+    def save_plot(self, filename: str):
+        data_frame = self._prev._evaluate_data_operations()
+        data_frame = self._prev.subset_to_experiment(data_frame)
+        plot = self._prev.evaluate_plot_operations(data_frame)
+        print(f"Saving baseline scatter plot to {filename}")
+        plot.save(filename)
+
 
 class _ScatterPlotWithNormalizedExperimentData(_AnalysisPlan):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
+
+    def save_plot(self, filename: str):
+        data_frame = self._prev._evaluate_data_operations()
+        data_frame = self._prev.subset_to_experiment(data_frame)
+        plot = self._prev.evaluate_plot_operations(data_frame)
+        print(f"Saving baseline scatter plot to {filename}")
+        plot.save(filename)
 
 
 class _ScatterPlotWithNormalizedData(_AnalysisPlan):
@@ -77,6 +97,9 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan):
     def experiment(self) -> _ScatterPlotWithNormalizedExperimentData:
         return _ScatterPlotWithNormalizedExperimentData(self)
 
+    def _evaluate_data_operations(self):
+        return self._prev._evaluate_data_operations()
+
 
 class _NormalizedExperimentData(_AnalysisPlan):
     def __init__(self, prev: _AnalysisPlan):
@@ -94,27 +117,58 @@ class _NormalizedData(_AnalysisPlan):
     def experiment(self) -> _NormalizedExperimentData:
         return _NormalizedExperimentData(self)
 
+    def _evaluate_data_operations(self):
+        data_frame = self._prev._evaluate_data_operations()
+        baseline_df = self._prev.subset_to_baseline(data_frame)
+        baseline_medians = baseline_df.groupby(self._column)[Column.VALUE].median()
+        data_frame[Column.NORMALIZED_VALUE] = data_frame.apply(
+            lambda row: row[Column.VALUE] / baseline_medians[row[self._column]], axis=1
+        )
+        return data_frame
 
-class _WithExperimentData(_AnalysisPlan):
-    def __init__(self, project: str, run_id: int, prev: _AnalysisPlan):
+
+class _WithExperimentAndBaselineData(_AnalysisPlan):
+    def __init__(self, project: str, exp_id: int, prev: _AnalysisPlan):
         self._project = project
-        self._run_id = run_id
+        self._exp_id = exp_id
         self._prev = prev
 
     def normalize_by(self, column: Column) -> _NormalizedData:
         return _NormalizedData(column, self)
 
+    def _evaluate_data_operations(self):
+        baseline_df = self._prev._evaluate_data_operations()
+        experiment_df = self._load_and_cache_data()
+        return concat([baseline_df, experiment_df])
+
+    def _load_and_cache_data(self):
+        file_path = download_to_cache(self._exp_id, self._project)
+        return read_csv(file_path)
+
 
 class _WithBaselineData(_AnalysisPlan):
-    def __init__(self, project: str, run_id: int, prev: _AnalysisPlan):
+    def __init__(self, project: str, exp_id: int, prev: _AnalysisPlan):
         self._project = project
-        self._run_id = run_id
+        self._exp_id = exp_id
         self._prev = prev
 
-    def add_experiment_from_db(self, project: str, run_id: int) -> _WithExperimentData:
-        return _WithExperimentData(project, run_id, self)
+    def add_experiment_from_db(
+        self, project: str, exp_id: int
+    ) -> _WithExperimentAndBaselineData:
+        return _WithExperimentAndBaselineData(project, exp_id, self)
+
+    def _evaluate_data_operations(self):
+        assert isinstance(
+            self._prev, ReAnalyze
+        )  # `self` should be the first element with data
+        baseline_df = self._load_and_cache_data()
+        return baseline_df
+
+    def _load_and_cache_data(self):
+        file_path = download_to_cache(self._exp_id, self._project)
+        return read_csv(file_path)
 
 
 class ReAnalyze(_AnalysisPlan):
-    def add_baseline_from_db(self, project: str, run_id: int) -> _WithBaselineData:
-        return _WithBaselineData(project, run_id, self)
+    def add_baseline_from_db(self, project: str, exp_id: int) -> _WithBaselineData:
+        return _WithBaselineData(project, exp_id, self)

@@ -9,3 +9,4 @@ python3.14 -m mypy reanalyze tests
 #python3.14 -m pytype reanalyze/tests
 #python3.14 -m pyflakes reanalyze/tests
 #python3.14 -m pydocstyle reanalyze/tests
+python3.14 -m pytest
