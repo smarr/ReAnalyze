@@ -1,10 +1,37 @@
 import gzip
 import sys
+from enum import Enum
 from os import makedirs
 from os.path import basename, exists, join
 from time import sleep
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
+
+
+class Column(Enum):
+    """The columns available in the ReBench data."""
+
+    EXP_ID = "expid"
+    RUN_ID = "runid"
+    TRIAL_ID = "trialid"
+    COMMIT_ID = "commitid"
+    BENCHMARK = "bench"
+    EXECUTOR = "exe"
+    SUITE = "suite"
+    COMMAND_LINE = "cmdline"
+    VAR_VALUE = "varvalue"
+    CORES = "cores"
+    INPUT_SIZE = "inputsize"
+    EXTRA_ARGS = "extraargs"
+    INVOCATION = "invocation"
+    WARMUP = "warmup"
+    CRITERION = "criterion"
+    UNIT = "unit"
+    VALUE = "value"
+    ITERATION = "iteration"
+    ENV_ID = "envid"
+
+    NORMALIZED_VALUE = "normalized_value"
 
 
 def _file_name(data_id):

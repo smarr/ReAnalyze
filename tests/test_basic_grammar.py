@@ -1,18 +1,23 @@
+# pylint: disable=redefined-outer-name
+from pytest import fixture
+
 from reanalyze import Column, ReAnalyze
 
 
-def test_basic_scenario():
-    normalized = (
+@fixture
+def normalized():
+    return (
         ReAnalyze()
         .add_baseline_from_db("PlissDemo", 5843)
         .add_experiment_from_db("PlissDemo", 5844)
         .normalize_by(Column.BENCHMARK)
     )
 
+
+def test_plot_iteration_time(normalized):
     plot_iteration_time = (
         normalized.benchmark("Sieve")
         .scatter_plot()
-        .theme_acmart()
         .group_by(Column.INVOCATION)
         .x_values(Column.ITERATION)
         .y_values(Column.VALUE)
@@ -22,14 +27,16 @@ def test_basic_scenario():
     plot_iteration_time.baseline().save_plot("baseline-iteration-time.pdf")
     plot_iteration_time.experiment().save_plot("experiment-iteration-time.pdf")
 
+
+def test_plot_change_boxplot(normalized):
     plot_change = (
         normalized.experiment()
         .boxplot()
-        .x_values(Column.NORMALIZED_VALUE)
-        .y_values(Column.BENCHMARK)
-        .x_label("run time factor compared to baseline")
+        .values(Column.NORMALIZED_VALUE)
+        .category(Column.BENCHMARK)
+        .value_axis_label("run time factor compared to baseline")
     )
-    plot_change.save("change-boxplot.pdf")
+    plot_change.save_plot("change-boxplot.pdf")
 
     # sieve_norm = r.data[Column.BENCHMARK == "Sieve", Column.NORMALIZED_VALUE]
     #

@@ -1,38 +1,10 @@
 # pylint: disable=protected-access
-
-from enum import Enum
-
+from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, read_csv
 
-from reanalyze.plot import configure_acmart_style
-from reanalyze.rebench import download_to_cache
-
-
-class Column(Enum):
-    """The columns available in the ReBench data."""
-
-    EXP_ID = "expid"
-    RUN_ID = "runid"
-    TRIAL_ID = "trialid"
-    COMMIT_ID = "commitid"
-    BENCHMARK = "bench"
-    EXECUTOR = "exe"
-    SUITE = "suite"
-    COMMAND_LINE = "cmdline"
-    VAR_VALUE = "varvalue"
-    CORES = "cores"
-    INPUT_SIZE = "inputsize"
-    EXTRA_ARGS = "extraargs"
-    INVOCATION = "invocation"
-    WARMUP = "warmup"
-    CRITERION = "criterion"
-    UNIT = "unit"
-    VALUE = "value"
-    ITERATION = "iteration"
-    ENV_ID = "envid"
-
-    NORMALIZED_VALUE = "normalized_value"
+from reanalyze.plot import configure_acmart_style, create_boxplot, create_scatter_plot
+from reanalyze.rebench import Column, download_to_cache
 
 
 class _AnalysisPlan:
@@ -40,10 +12,13 @@ class _AnalysisPlan:
         raise TypeError()
 
     def _subset_to_experiment(self, data_frame: DataFrame) -> DataFrame:
-        raise TypeError()
+        raise TypeError(f"Not implemented by {type(self).__name__}")
 
     def _evaluate_data_operations(self) -> DataFrame:
-        raise TypeError()
+        raise TypeError(f"Not implemented by {type(self).__name__}")
+
+    def _evaluate_plot_operations(self, data_frame: DataFrame) -> Figure:
+        raise TypeError(f"Not implemented by {type(self).__name__}")
 
 
 class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan):
@@ -55,7 +30,8 @@ class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan):
         data_frame = self._prev._subset_to_experiment(data_frame)
         plot = self._prev._evaluate_plot_operations(data_frame)
         print(f"Saving baseline scatter plot to {filename}")
-        plot.save(filename)
+        plot.savefig(filename)
+        plt.close(plot)
 
 
 class _ScatterPlotWithNormalizedExperimentData(_AnalysisPlan):
@@ -67,7 +43,8 @@ class _ScatterPlotWithNormalizedExperimentData(_AnalysisPlan):
         data_frame = self._prev._subset_to_experiment(data_frame)
         plot = self._prev._evaluate_plot_operations(data_frame)
         print(f"Saving baseline scatter plot to {filename}")
-        plot.save(filename)
+        plot.savefig(filename)
+        plt.close(plot)
 
 
 class _ScatterPlotWithNormalizedData(_AnalysisPlan):
@@ -78,10 +55,15 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan):
         self._x_label: str = ""
         self._y_label: str = ""
         self._y_label_add_unit = False
-        self._theme_acmart = False
+        self._theme_acmart = True
+        self._group_by: Column | None = None
 
     def theme_acmart(self) -> _ScatterPlotWithNormalizedData:
         self._theme_acmart = True
+        return self
+
+    def group_by(self, column: Column) -> _ScatterPlotWithNormalizedData:
+        self._group_by = column
         return self
 
     def x_values(self, column: Column) -> _ScatterPlotWithNormalizedData:
@@ -118,8 +100,8 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan):
         return self._prev._subset_to_experiment(data_frame)
 
     def _evaluate_plot_operations(self, data_frame: DataFrame) -> Figure:
-        if self._x_values is None or self._y_values is None:
-            raise ValueError("x_values and y_values must be set before plotting")
+        if self._x_values is None or self._y_values is None or self._group_by is None:
+            raise ValueError("x_values, y_values, group_by must be set before plotting")
 
         # no further plot-related things expected
         assert isinstance(self._prev, _NormalizedBenchmarkData)
@@ -127,13 +109,72 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan):
         if self._theme_acmart:
             configure_acmart_style()
 
-
-
+        return create_scatter_plot(
+            data_frame,
+            self._x_values,
+            self._y_values,
+            self._group_by,
+            self._x_label,
+            self._y_label,
+            self._y_label_add_unit,
+        )
 
 
 class _NormalizedExperimentData(_AnalysisPlan):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
+
+    def boxplot(self) -> _BoxPlotWithNormalizedExperimentData:
+        return _BoxPlotWithNormalizedExperimentData(self)
+
+    def _evaluate_data_operations(self) -> DataFrame:
+        df = self._prev._evaluate_data_operations()
+        return self._prev._subset_to_experiment(df)
+
+
+class _BoxPlotWithNormalizedExperimentData(_AnalysisPlan):
+    def __init__(self, prev: _AnalysisPlan):
+        self._prev = prev
+        self._values: Column | None = None
+        self._category: Column | None = None
+        self._orientation: str = "horizontal"
+        self._value_axis_label: str = ""
+        self._theme_acmart = True
+
+    def values(self, column: Column) -> _BoxPlotWithNormalizedExperimentData:
+        self._values = column
+        return self
+
+    def category(self, column: Column) -> _BoxPlotWithNormalizedExperimentData:
+        self._category = column
+        return self
+
+    def value_axis_label(self, label: str) -> _BoxPlotWithNormalizedExperimentData:
+        self._value_axis_label = label
+        return self
+
+    def save_plot(self, filename: str):
+        if self._values is None or self._category is None:
+            raise ValueError("values and category column must be set before plotting")
+
+        data_frame = self._prev._evaluate_data_operations()
+
+        assert isinstance(self._prev, _NormalizedExperimentData)
+
+        if self._theme_acmart:
+            configure_acmart_style()
+
+        plot = create_boxplot(
+            data_frame,
+            self._values,
+            self._category,
+            self._value_axis_label,
+            self._orientation,
+            self._theme_acmart,
+        )
+        print(f"Saving boxplot with experiment data to {filename}")
+        plot.savefig(filename)
+        plt.close(plot)
 
 
 class _NormalizedBenchmarkData(_AnalysisPlan):
