@@ -2,8 +2,10 @@
 
 from enum import Enum
 
+from matplotlib.figure import Figure
 from pandas import DataFrame, concat, read_csv
 
+from reanalyze.plot import configure_acmart_style
 from reanalyze.rebench import download_to_cache
 
 
@@ -51,7 +53,7 @@ class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan):
     def save_plot(self, filename: str):
         data_frame = self._prev._evaluate_data_operations()
         data_frame = self._prev._subset_to_experiment(data_frame)
-        plot = self._prev.evaluate_plot_operations(data_frame)
+        plot = self._prev._evaluate_plot_operations(data_frame)
         print(f"Saving baseline scatter plot to {filename}")
         plot.save(filename)
 
@@ -63,7 +65,7 @@ class _ScatterPlotWithNormalizedExperimentData(_AnalysisPlan):
     def save_plot(self, filename: str):
         data_frame = self._prev._evaluate_data_operations()
         data_frame = self._prev._subset_to_experiment(data_frame)
-        plot = self._prev.evaluate_plot_operations(data_frame)
+        plot = self._prev._evaluate_plot_operations(data_frame)
         print(f"Saving baseline scatter plot to {filename}")
         plot.save(filename)
 
@@ -76,6 +78,11 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan):
         self._x_label: str = ""
         self._y_label: str = ""
         self._y_label_add_unit = False
+        self._theme_acmart = False
+
+    def theme_acmart(self) -> _ScatterPlotWithNormalizedData:
+        self._theme_acmart = True
+        return self
 
     def x_values(self, column: Column) -> _ScatterPlotWithNormalizedData:
         self._x_values = column
@@ -110,10 +117,39 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan):
     def _subset_to_experiment(self, data_frame: DataFrame) -> DataFrame:
         return self._prev._subset_to_experiment(data_frame)
 
+    def _evaluate_plot_operations(self, data_frame: DataFrame) -> Figure:
+        if self._x_values is None or self._y_values is None:
+            raise ValueError("x_values and y_values must be set before plotting")
+
+        # no further plot-related things expected
+        assert isinstance(self._prev, _NormalizedBenchmarkData)
+
+        if self._theme_acmart:
+            configure_acmart_style()
+
+
+
+
 
 class _NormalizedExperimentData(_AnalysisPlan):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
+
+
+class _NormalizedBenchmarkData(_AnalysisPlan):
+    def __init__(self, benchmark_name: str, prev: _AnalysisPlan):
+        self._benchmark_name = benchmark_name
+        self._prev = prev
+
+    def scatter_plot(self) -> _ScatterPlotWithNormalizedData:
+        return _ScatterPlotWithNormalizedData(self)
+
+    def _evaluate_data_operations(self) -> DataFrame:
+        data_frame = self._prev._evaluate_data_operations()
+        return data_frame[data_frame[Column.BENCHMARK.value] == self._benchmark_name]
+
+    def _subset_to_experiment(self, data_frame: DataFrame) -> DataFrame:
+        return self._prev._subset_to_experiment(data_frame)
 
 
 class _NormalizedData(_AnalysisPlan):
@@ -121,13 +157,13 @@ class _NormalizedData(_AnalysisPlan):
         self._column = column
         self._prev = prev
 
-    def scatter_plot(self) -> _ScatterPlotWithNormalizedData:
-        return _ScatterPlotWithNormalizedData(self)
+    def benchmark(self, benchmark_name: str) -> _NormalizedBenchmarkData:
+        return _NormalizedBenchmarkData(benchmark_name, self)
 
     def experiment(self) -> _NormalizedExperimentData:
         return _NormalizedExperimentData(self)
 
-    def _evaluate_data_operations(self):
+    def _evaluate_data_operations(self) -> DataFrame:
         data_frame = self._prev._evaluate_data_operations()
         baseline_df = self._prev._subset_to_baseline(data_frame)
         baseline_medians = baseline_df.groupby(self._column.value)[
