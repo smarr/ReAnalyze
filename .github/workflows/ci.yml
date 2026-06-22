@@ -10,6 +10,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - name: Install Linux Biolinum font
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fontconfig fonts-linuxlibertine
+          fc-cache -f -v
+
       - name: Set up Python 3.14
         uses: actions/setup-python@v6
         with:
@@ -39,6 +45,11 @@ jobs:
       - name: Run mypy
         if: always()
         run: python3.14 -m mypy reanalyze tests
+
+      - name: Verify Linux Biolinum visible to matplotlib
+        if: always()
+        run: |
+          python3.14 -c "from matplotlib import font_manager; fonts = {f.name for f in font_manager.fontManager.ttflist}; assert ('Linux Biolinum O' in fonts or 'Linux Biolinum' in fonts), 'Linux Biolinum font not found by matplotlib'"
 
       - name: Run pytest
         if: always()
