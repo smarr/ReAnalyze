@@ -14,7 +14,8 @@ test = [
     "isort",
     "mypy",
     "pylint",
-    "pytest"
+    "pytest",
+    "pandas-stubs"
 ]
 
 [tool.pylint."messages control"]
