@@ -1,4 +1,6 @@
 # pylint: disable=protected-access
+from typing import Literal
+
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from pandas import DataFrame, concat, read_csv
@@ -137,7 +139,7 @@ class _BoxPlotWithNormalizedExperimentData(_AnalysisPlan):
         self._prev = prev
         self._values: Column | None = None
         self._category: Column | None = None
-        self._orientation: str = "horizontal"
+        self._orientation: Literal["horizontal", "vertical"] = "horizontal"
         self._value_axis_label: str = ""
         self._theme_acmart = True
 

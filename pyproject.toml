@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "A tool for analyzing and visualizing benchmark data."
 dependencies = [
     "matplotlib",
-    "pandas"
+    "pandas",
+    "seaborn"
 ]
 
 [project.optional-dependencies]
@@ -15,7 +16,8 @@ test = [
     "mypy",
     "pylint",
     "pytest",
-    "pandas-stubs"
+    "pandas-stubs",
+    "types-seaborn"
 ]
 
 [tool.pylint."messages control"]

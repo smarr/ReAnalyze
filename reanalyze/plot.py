@@ -1,7 +1,9 @@
 import sys
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 from matplotlib import font_manager
 from matplotlib.figure import Figure
 from matplotlib.ticker import FixedLocator, FuncFormatter
@@ -84,28 +86,43 @@ def create_boxplot(
     values: Column,
     category: Column,
     value_axis_label: str,
-    orientation: str,
-    theme_acmart,
+    orientation: Literal["horizontal", "vertical"],
+    theme_acmart: bool,
 ) -> Figure:
     plot_df = df.copy()
     plot_df = plot_df.dropna(subset=[values.value, category.value])
 
     cat_order = sorted(plot_df[category.value].unique())
+    if orientation == "horizontal":
+        cat_order.reverse()
+        x = values.value
+        y = category.value
+    else:
+        x = category.value
+        y = values.value
     plot_df[category.value] = pd.Categorical(
         plot_df[category.value], categories=cat_order, ordered=True
     )
 
     fig, ax = plt.subplots(figsize=(5, max(2, int(len(cat_order) * 0.23))))
-    plot_df.boxplot(
-        column=values.value,
-        by=category.value,
-        orientation=orientation,
+    sns.boxplot(
+        data=plot_df,
+        x=x,
+        y=y,
         ax=ax,
-        patch_artist=True,
-        boxprops={"facecolor": "#729fcf", "edgecolor": "#729fcf"},
-        medianprops={"color": "black", "linewidth": 1.25},
-        flierprops={"markersize": 2, "alpha": 0.1},
+        flierprops={"markersize": 2, "marker": "o", "alpha": 0.1},
     )
+
+    # Apply custom styling to match original appearance
+    for patch in ax.patches:
+        patch.set_facecolor("#729fcf")
+        patch.set_edgecolor("#729fcf")
+
+    # Style median lines
+    for line in ax.lines:
+        if line.get_color() == (0, 0, 0):
+            line.set_color("black")
+            line.set_linewidth(1.25)
 
     fig.suptitle("")
     ax.set_title("")
