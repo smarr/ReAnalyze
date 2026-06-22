@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ReAnalyze"
 version = "0.1.0"
@@ -34,3 +38,6 @@ disable = [
 
 [tool.isort]
 profile = "black"
+
+[tool.setuptools.packages.find]
+include = ["reanalyze*"]
