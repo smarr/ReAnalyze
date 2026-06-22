@@ -46,22 +46,27 @@ def create_scatter_plot(
     y_label: str,
     y_label_add_unit: bool,
 ) -> Figure:
-    group_col = sorted(df[group_by.value].unique())
     fig, ax = plt.subplots(figsize=(5, 2.8))
+    sns.scatterplot(
+        data=df,
+        x=x_values.value,
+        y=y_values.value,
+        hue=group_by.value,
+        ax=ax,
+        marker="o",
+        s=5,
+        alpha=0.33,
+        palette="colorblind",
+        edgecolor="none",
+    )
 
-    for group in group_col:
-        invocation_df = df.loc[df[group_by.value] == group].sort_values(
-            by=group_by.value
-        )
-        ax.plot(
-            invocation_df[x_values.value],
-            invocation_df[y_values.value],
-            linestyle="None",
-            marker="o",
-            markersize=1,
-            alpha=0.25,
-            label=f"invocation {group}",
-        )
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(
+        handles,
+        [f"invocation {label}" for label in labels],
+        frameon=False,
+        fontsize=8,
+    )
 
     ax.set_xlabel(x_label)
     if y_label_add_unit:
@@ -73,9 +78,6 @@ def create_scatter_plot(
     ax.set_ylim(bottom=0)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-
-    if len(group_col) <= 8:
-        ax.legend(frameon=False, fontsize=8)
 
     plt.tight_layout()
     return fig
