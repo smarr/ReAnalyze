@@ -2,6 +2,20 @@
 name = "ReAnalyze"
 version = "0.1.0"
 description = "A tool for analyzing and visualizing benchmark data."
+dependencies = [
+    "matplotlib",
+    "pandas"
+]
+
+[project.optional-dependencies]
+test = [
+    "black",
+    "flake8",
+    "isort",
+    "mypy",
+    "pylint",
+    "pytest"
+]
 
 [tool.pylint."messages control"]
 disable = [
