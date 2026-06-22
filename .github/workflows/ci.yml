@@ -1,0 +1,45 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install black isort pylint flake8 mypy pytest
+
+      - name: Run Black
+        if: always()
+        run: python3.14 -m black --check reanalyze tests
+
+      - name: Run isort
+        if: always()
+        run: python3.14 -m isort --check-only reanalyze tests
+
+      - name: Run Pylint
+        if: always()
+        run: python3.14 -m pylint reanalyze tests
+
+      - name: Run Flake8
+        if: always()
+        run: python3.14 -m flake8 reanalyze tests
+
+      - name: Run mypy
+        if: always()
+        run: python3.14 -m mypy reanalyze tests
+
+      - name: Run pytest
+        if: always()
+        run: python3.14 -m pytest
