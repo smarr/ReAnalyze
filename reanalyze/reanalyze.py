@@ -43,6 +43,89 @@ class _WithData(ABC):
 
         return data_frame[non_trivial_cols].describe(include="all").to_string()
 
+    def stats(self) -> _StatsWithData:
+        return _StatsWithData(self)  # type: ignore
+
+
+class _StatsWithData(_AnalysisPlan, _WithData):
+    def __init__(self, prev: _AnalysisPlan):
+        self._prev = prev
+
+    def column(self, column: Column) -> _StatsForColumn:
+        return _StatsForColumn(column, self)
+
+    def _evaluate_data_operations(self) -> DataFrame:
+        return self._prev._evaluate_data_operations()
+
+
+class _StatsForColumn(_AnalysisPlan, _WithData):
+    def __init__(self, column: Column, prev: _AnalysisPlan):
+        self._column = column
+        self._prev = prev
+
+        self._data: DataFrame | None = None
+
+    def latex_macros(self, filename: str) -> _StatsForColumnLatexMacros:
+        return _StatsForColumnLatexMacros(self._column, filename, self)
+
+    def _evaluate_data_operations(self):
+        if self._data is None:
+            data_frame = self._prev._evaluate_data_operations()
+            self._data = data_frame[[self._column.value]]
+        return self._data
+
+    def min(self) -> float:
+        data_frame = self._evaluate_data_operations()
+        return data_frame[self._column.value].min()
+
+    def max(self) -> float:
+        data_frame = self._evaluate_data_operations()
+        return data_frame[self._column.value].max()
+
+    def median(self) -> float:
+        data_frame = self._evaluate_data_operations()
+        return data_frame[self._column.value].median()
+
+
+class _StatsForColumnLatexMacros(_AnalysisPlan, _WithData):
+    def __init__(self, column: Column, filename: str, prev: _AnalysisPlan):
+        self._column = column
+        self._filename = filename
+        self._prev = prev
+
+        self._median_macro_name: str | None = None
+        self._min_macro_name: str | None = None
+        self._max_macro_name: str | None = None
+
+    def median(self, macro_name: str) -> _StatsForColumnLatexMacros:
+        self._median_macro_name = macro_name
+        return self
+
+    def min(self, macro_name: str) -> _StatsForColumnLatexMacros:
+        self._min_macro_name = macro_name
+        return self
+
+    def max(self, macro_name: str) -> _StatsForColumnLatexMacros:
+        self._max_macro_name = macro_name
+        return self
+
+    def save_to_string(self) -> str:
+        prev: _StatsForColumn = self._prev  # type: ignore
+        result = ""
+        if self._median_macro_name is not None:
+            result += f"\\newcommand{{\\{self._median_macro_name}}}{{{prev.median()}}}\n"  # noqa: E501 pylint: disable=line-too-long
+        if self._min_macro_name is not None:
+            result += f"\\newcommand{{\\{self._min_macro_name}}}{{{prev.min()}}}\n"
+        if self._max_macro_name is not None:
+            result += f"\\newcommand{{\\{self._max_macro_name}}}{{{prev.max()}}}\n"
+
+        return result
+
+    def save_macros(self, filename: str):
+        result = self.save_to_string()
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(result)
+
 
 class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan, _WithData):
     def __init__(self, prev: _AnalysisPlan):

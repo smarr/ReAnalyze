@@ -1,4 +1,6 @@
 # pylint: disable=redefined-outer-name
+from os.path import exists
+
 from pytest import fixture
 
 from reanalyze import Column, ReAnalyze
@@ -65,9 +67,31 @@ def test_plot_change_boxplot(normalized):
     )
     plot_change.save_plot("change-boxplot.pdf")
 
-    # sieve_norm = r.data[Column.BENCHMARK == "Sieve", Column.NORMALIZED_VALUE]
-    #
-    # with open("results.tex", "w") as f:
-    #     write_macro("sieveMedian", sieve_norm.median(), f)
-    #     write_macro("sieveMin", sieve_norm.min(), f)
-    #     write_macro("sieveMax", sieve_norm.max(), f)
+
+def test_latex(normalized):
+    stats = (
+        normalized.benchmark("Sieve")
+        .stats()
+        .column(Column.NORMALIZED_VALUE)
+        .latex_macros("results.tex")
+        .median("sieveMedian")
+        .min("sieveMin")
+        .max("sieveMax")
+    )
+    stats.save_macros("results.tex")
+
+    result = stats.save_to_string()
+    assert result == (
+        "\\newcommand{\\sieveMedian}{0.9701970124104857}\n"
+        "\\newcommand{\\sieveMin}{0.5852208288778717}\n"
+        "\\newcommand{\\sieveMax}{1.786008230452675}\n"
+    )
+
+    # assert that results.tex exists
+    assert exists("results.tex")
+
+    # assert that results.tex contains the expected macros
+
+    with open("results.tex", "r", encoding="utf-8") as f:
+        content = f.read()
+        assert content == result
