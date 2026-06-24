@@ -1,4 +1,5 @@
 # pylint: disable=protected-access
+from abc import ABC, abstractmethod
 from typing import Literal
 
 from matplotlib import pyplot as plt
@@ -11,7 +12,7 @@ from reanalyze.rebench import Column, download_to_cache
 
 class _AnalysisPlan:
     def _subset_to_baseline(self, data_frame: DataFrame) -> DataFrame:
-        raise TypeError()
+        raise TypeError(f"Not implemented by {type(self).__name__}")
 
     def _subset_to_experiment(self, data_frame: DataFrame) -> DataFrame:
         raise TypeError(f"Not implemented by {type(self).__name__}")
@@ -23,7 +24,27 @@ class _AnalysisPlan:
         raise TypeError(f"Not implemented by {type(self).__name__}")
 
 
-class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan):
+class _WithData(ABC):
+    @abstractmethod
+    def _evaluate_data_operations(self) -> DataFrame:
+        raise TypeError(f"Not implemented by {type(self).__name__}")
+
+    def summarize(self) -> str:
+        data_frame = self._evaluate_data_operations()
+
+        non_trivial_cols = data_frame.columns[
+            data_frame.apply(lambda col: (~col.dropna().isin([0, 1])).any())
+        ].tolist()
+
+        non_trivial_cols.remove(Column.EXP_ID.value)
+        non_trivial_cols.remove(Column.RUN_ID.value)
+        non_trivial_cols.remove(Column.TRIAL_ID.value)
+        non_trivial_cols.remove(Column.COMMAND_LINE.value)
+
+        return data_frame[non_trivial_cols].describe(include="all").to_string()
+
+
+class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan, _WithData):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
 
@@ -36,7 +57,7 @@ class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan):
         plt.close(plot)
 
 
-class _ScatterPlotWithNormalizedExperimentData(_AnalysisPlan):
+class _ScatterPlotWithNormalizedExperimentData(_AnalysisPlan, _WithData):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
 
@@ -49,7 +70,7 @@ class _ScatterPlotWithNormalizedExperimentData(_AnalysisPlan):
         plt.close(plot)
 
 
-class _ScatterPlotWithNormalizedData(_AnalysisPlan):
+class _ScatterPlotWithNormalizedData(_AnalysisPlan, _WithData):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
         self._x_values: Column | None = None
@@ -122,7 +143,7 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan):
         )
 
 
-class _NormalizedExperimentData(_AnalysisPlan):
+class _NormalizedExperimentData(_AnalysisPlan, _WithData):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
 
@@ -134,7 +155,7 @@ class _NormalizedExperimentData(_AnalysisPlan):
         return self._prev._subset_to_experiment(df)
 
 
-class _BoxPlotWithNormalizedExperimentData(_AnalysisPlan):
+class _BoxPlotWithNormalizedExperimentData(_AnalysisPlan, _WithData):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
         self._values: Column | None = None
@@ -179,7 +200,7 @@ class _BoxPlotWithNormalizedExperimentData(_AnalysisPlan):
         plt.close(plot)
 
 
-class _NormalizedBenchmarkData(_AnalysisPlan):
+class _NormalizedBenchmarkData(_AnalysisPlan, _WithData):
     def __init__(self, benchmark_name: str, prev: _AnalysisPlan):
         self._benchmark_name = benchmark_name
         self._prev = prev
@@ -195,7 +216,7 @@ class _NormalizedBenchmarkData(_AnalysisPlan):
         return self._prev._subset_to_experiment(data_frame)
 
 
-class _NormalizedData(_AnalysisPlan):
+class _NormalizedData(_AnalysisPlan, _WithData):
     def __init__(self, column: Column, prev: _AnalysisPlan):
         self._column = column
         self._prev = prev
@@ -223,19 +244,23 @@ class _NormalizedData(_AnalysisPlan):
         return self._prev._subset_to_experiment(data_frame)
 
 
-class _WithExperimentAndBaselineData(_AnalysisPlan):
+class _WithExperimentAndBaselineData(_AnalysisPlan, _WithData):
     def __init__(self, project: str, exp_id: int, prev: _AnalysisPlan):
         self._project = project
         self._exp_id = exp_id
         self._prev = prev
 
+        self._data: DataFrame | None = None
+
     def normalize_by(self, column: Column) -> _NormalizedData:
         return _NormalizedData(column, self)
 
     def _evaluate_data_operations(self):
-        baseline_df = self._prev._evaluate_data_operations()
-        experiment_df = self._load_and_cache_data()
-        return concat([baseline_df, experiment_df])
+        if self._data is None:
+            baseline_df = self._prev._evaluate_data_operations()
+            experiment_df = self._load_and_cache_data()
+            self._data = concat([baseline_df, experiment_df])
+        return self._data
 
     def _load_and_cache_data(self):
         file_path = download_to_cache(self._exp_id, self._project)
@@ -248,7 +273,7 @@ class _WithExperimentAndBaselineData(_AnalysisPlan):
         return self._prev._subset_to_baseline(data_frame)
 
 
-class _WithBaselineData(_AnalysisPlan):
+class _WithBaselineData(_AnalysisPlan, _WithData):
     def __init__(self, project: str, exp_id: int, prev: _AnalysisPlan):
         self._project = project
         self._exp_id = exp_id
