@@ -82,9 +82,9 @@ def test_latex(normalized):
 
     result = stats.save_to_string()
     assert result == (
-        "\\newcommand{\\sieveMedian}{0.9701970124104857}\n"
-        "\\newcommand{\\sieveMin}{0.5852208288778717}\n"
-        "\\newcommand{\\sieveMax}{1.786008230452675}\n"
+        "\\newcommand{\\sieveMedian}{0.97$\\times$\\xspace}\n"
+        "\\newcommand{\\sieveMin}{0.59$\\times$\\xspace}\n"
+        "\\newcommand{\\sieveMax}{1.79$\\times$\\xspace}\n"
     )
 
     # assert that results.tex exists

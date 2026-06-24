@@ -109,15 +109,19 @@ class _StatsForColumnLatexMacros(_AnalysisPlan, _WithData):
         self._max_macro_name = macro_name
         return self
 
+    def _macro(self, name: str, value: float):
+        print(f"{name}: {value:.2f}x")
+        return f"\\newcommand{{\\{name}}}{{{value:.2f}$\\times$\\xspace}}\n"
+
     def save_to_string(self) -> str:
         prev: _StatsForColumn = self._prev  # type: ignore
         result = ""
         if self._median_macro_name is not None:
-            result += f"\\newcommand{{\\{self._median_macro_name}}}{{{prev.median()}}}\n"  # noqa: E501 pylint: disable=line-too-long
+            result += self._macro(self._median_macro_name, prev.median())
         if self._min_macro_name is not None:
-            result += f"\\newcommand{{\\{self._min_macro_name}}}{{{prev.min()}}}\n"
+            result += self._macro(self._min_macro_name, prev.min())
         if self._max_macro_name is not None:
-            result += f"\\newcommand{{\\{self._max_macro_name}}}{{{prev.max()}}}\n"
+            result += self._macro(self._max_macro_name, prev.max())
 
         return result
 
@@ -125,6 +129,7 @@ class _StatsForColumnLatexMacros(_AnalysisPlan, _WithData):
         result = self.save_to_string()
         with open(filename, "w", encoding="utf-8") as f:
             f.write(result)
+        print(f"Saved LaTeX macros to {filename}")
 
 
 class _ScatterPlotWithNormalizedBaselineData(_AnalysisPlan, _WithData):
