@@ -51,7 +51,7 @@ class _StatsWithData(_AnalysisPlan, _WithData):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
 
-    def column(self, column: Column) -> _StatsForColumn:
+    def column(self, column: Column) -> "_StatsForColumn":
         return _StatsForColumn(column, self)
 
     def _evaluate_data_operations(self) -> DataFrame:

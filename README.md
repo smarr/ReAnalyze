@@ -32,3 +32,9 @@ normalized.benchmark("Sieve")
   .experiment()
   .save_plot("experiment-iteration-time.pdf")
 ```
+
+## Development Setup 
+
+```
+pip install --editable ."[test]"
+```
