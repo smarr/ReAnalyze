@@ -43,7 +43,7 @@ class _WithData(ABC):
 
         return data_frame[non_trivial_cols].describe(include="all").to_string()
 
-    def stats(self) -> _StatsWithData:
+    def stats(self) -> "_StatsWithData":
         return _StatsWithData(self)  # type: ignore
 
 
