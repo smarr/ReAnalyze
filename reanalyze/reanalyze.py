@@ -65,7 +65,7 @@ class _StatsForColumn(_AnalysisPlan, _WithData):
 
         self._data: DataFrame | None = None
 
-    def latex_macros(self, filename: str) -> _StatsForColumnLatexMacros:
+    def latex_macros(self, filename: str) -> "_StatsForColumnLatexMacros":
         return _StatsForColumnLatexMacros(self._column, filename, self)
 
     def _evaluate_data_operations(self):
