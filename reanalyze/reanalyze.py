@@ -97,15 +97,15 @@ class _StatsForColumnLatexMacros(_AnalysisPlan, _WithData):
         self._min_macro_name: str | None = None
         self._max_macro_name: str | None = None
 
-    def median(self, macro_name: str) -> _StatsForColumnLatexMacros:
+    def median(self, macro_name: str) -> "_StatsForColumnLatexMacros":
         self._median_macro_name = macro_name
         return self
 
-    def min(self, macro_name: str) -> _StatsForColumnLatexMacros:
+    def min(self, macro_name: str) -> "_StatsForColumnLatexMacros":
         self._min_macro_name = macro_name
         return self
 
-    def max(self, macro_name: str) -> _StatsForColumnLatexMacros:
+    def max(self, macro_name: str) -> "_StatsForColumnLatexMacros":
         self._max_macro_name = macro_name
         return self
 
@@ -169,39 +169,39 @@ class _ScatterPlotWithNormalizedData(_AnalysisPlan, _WithData):
         self._theme_acmart = True
         self._group_by: Column | None = None
 
-    def theme_acmart(self) -> _ScatterPlotWithNormalizedData:
+    def theme_acmart(self) -> "_ScatterPlotWithNormalizedData":
         self._theme_acmart = True
         return self
 
-    def group_by(self, column: Column) -> _ScatterPlotWithNormalizedData:
+    def group_by(self, column: Column) -> "_ScatterPlotWithNormalizedData":
         self._group_by = column
         return self
 
-    def x_values(self, column: Column) -> _ScatterPlotWithNormalizedData:
+    def x_values(self, column: Column) -> "_ScatterPlotWithNormalizedData":
         self._x_values = column
         return self
 
-    def y_values(self, column: Column) -> _ScatterPlotWithNormalizedData:
+    def y_values(self, column: Column) -> "_ScatterPlotWithNormalizedData":
         self._y_values = column
         return self
 
-    def x_label(self, label: str) -> _ScatterPlotWithNormalizedData:
+    def x_label(self, label: str) -> "_ScatterPlotWithNormalizedData":
         self._x_label = label
         return self
 
-    def y_label(self, label: str) -> _ScatterPlotWithNormalizedData:
+    def y_label(self, label: str) -> "_ScatterPlotWithNormalizedData":
         self._y_label = label
         return self
 
-    def y_label_with_unit(self, label: str) -> _ScatterPlotWithNormalizedData:
+    def y_label_with_unit(self, label: str) -> "_ScatterPlotWithNormalizedData":
         self._y_label_add_unit = True
         self._y_label = label
         return self
 
-    def baseline(self) -> _ScatterPlotWithNormalizedBaselineData:
+    def baseline(self) -> "_ScatterPlotWithNormalizedBaselineData":
         return _ScatterPlotWithNormalizedBaselineData(self)
 
-    def experiment(self) -> _ScatterPlotWithNormalizedExperimentData:
+    def experiment(self) -> "_ScatterPlotWithNormalizedExperimentData":
         return _ScatterPlotWithNormalizedExperimentData(self)
 
     def _evaluate_data_operations(self):
@@ -235,7 +235,7 @@ class _NormalizedExperimentData(_AnalysisPlan, _WithData):
     def __init__(self, prev: _AnalysisPlan):
         self._prev = prev
 
-    def boxplot(self) -> _BoxPlotWithNormalizedExperimentData:
+    def boxplot(self) -> "_BoxPlotWithNormalizedExperimentData":
         return _BoxPlotWithNormalizedExperimentData(self)
 
     def _evaluate_data_operations(self) -> DataFrame:
@@ -252,15 +252,15 @@ class _BoxPlotWithNormalizedExperimentData(_AnalysisPlan, _WithData):
         self._value_axis_label: str = ""
         self._theme_acmart = True
 
-    def values(self, column: Column) -> _BoxPlotWithNormalizedExperimentData:
+    def values(self, column: Column) -> "_BoxPlotWithNormalizedExperimentData":
         self._values = column
         return self
 
-    def category(self, column: Column) -> _BoxPlotWithNormalizedExperimentData:
+    def category(self, column: Column) -> "_BoxPlotWithNormalizedExperimentData":
         self._category = column
         return self
 
-    def value_axis_label(self, label: str) -> _BoxPlotWithNormalizedExperimentData:
+    def value_axis_label(self, label: str) -> "_BoxPlotWithNormalizedExperimentData":
         self._value_axis_label = label
         return self
 
@@ -293,7 +293,7 @@ class _NormalizedBenchmarkData(_AnalysisPlan, _WithData):
         self._benchmark_name = benchmark_name
         self._prev = prev
 
-    def scatter_plot(self) -> _ScatterPlotWithNormalizedData:
+    def scatter_plot(self) -> "_ScatterPlotWithNormalizedData":
         return _ScatterPlotWithNormalizedData(self)
 
     def _evaluate_data_operations(self) -> DataFrame:
@@ -309,10 +309,10 @@ class _NormalizedData(_AnalysisPlan, _WithData):
         self._column = column
         self._prev = prev
 
-    def benchmark(self, benchmark_name: str) -> _NormalizedBenchmarkData:
+    def benchmark(self, benchmark_name: str) -> "_NormalizedBenchmarkData":
         return _NormalizedBenchmarkData(benchmark_name, self)
 
-    def experiment(self) -> _NormalizedExperimentData:
+    def experiment(self) -> "_NormalizedExperimentData":
         return _NormalizedExperimentData(self)
 
     def _evaluate_data_operations(self) -> DataFrame:
